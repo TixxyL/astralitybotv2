@@ -86,6 +86,12 @@ try {
   if (!error.message.includes('duplicate column name')) throw error;
 }
 
+try {
+  db.exec('ALTER TABLE ticket_ratings ADD COLUMN comment TEXT');
+} catch (error) {
+  if (!error.message.includes('duplicate column name')) throw error;
+}
+
 function migrateWarnings() {
   const legacyPath = path.join(dataDirectory, 'warnings.json');
   if (!fs.existsSync(legacyPath)) return;
@@ -171,11 +177,11 @@ function getOpenTickets(guildId) {
   `).all(guildId);
 }
 
-function addTicketRating({ ticketId, guildId, channelId, ownerId, staffId, rating }) {
+function addTicketRating({ ticketId, guildId, channelId, ownerId, staffId, rating, comment }) {
   db.prepare(`
-    INSERT OR IGNORE INTO ticket_ratings (ticket_id, guild_id, channel_id, owner_id, staff_id, rating, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(ticketId, guildId, channelId, ownerId, staffId || null, rating, new Date().toISOString());
+    INSERT OR IGNORE INTO ticket_ratings (ticket_id, guild_id, channel_id, owner_id, staff_id, rating, comment, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(ticketId, guildId, channelId, ownerId, staffId || null, rating, comment || null, new Date().toISOString());
   return db.prepare('SELECT changes() AS changes').get().changes > 0;
 }
 

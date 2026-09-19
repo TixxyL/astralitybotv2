@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { Client, GatewayIntentBits, Partials, Collection, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, Collection, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, PermissionFlagsBits } = require('discord.js');
 const config = require('./config');
 const { errorEmbed } = require('./utils/embeds');
 const { isTicketStaff } = require('./utils/permissions');
@@ -166,6 +166,31 @@ client.on('interactionCreate', async (interaction) => {
       return;
     }
 
+    const modal = new ModalBuilder()
+      .setCustomId(`ticket_rating_modal:${channelId}:${rating}`)
+      .setTitle(`Valoración: ${rating}/5 estrellas`);
+    const commentInput = new TextInputBuilder()
+      .setCustomId('ticket_rating_comment')
+      .setLabel('¿Qué te pareció la atención?')
+      .setStyle(TextInputStyle.Paragraph)
+      .setPlaceholder('Escribe un comentario (opcional)')
+      .setRequired(false)
+      .setMaxLength(1000);
+    modal.addComponents(new ActionRowBuilder().addComponents(commentInput));
+    await interaction.showModal(modal);
+    return;
+  }
+
+  if (interaction.isModalSubmit() && interaction.customId.startsWith('ticket_rating_modal:')) {
+    const [, channelId, ratingValue] = interaction.customId.split(':');
+    const ticket = getTicket(channelId);
+    const rating = Number(ratingValue);
+    const comment = interaction.fields.getTextInputValue('ticket_rating_comment').trim();
+    if (!ticket || ticket.ownerId !== interaction.user.id || !Number.isInteger(rating) || rating < 1 || rating > 5) {
+      await interaction.reply({ content: '❌ Esta encuesta no está disponible para ti.', ephemeral: true });
+      return;
+    }
+
     const saved = addTicketRating({
       ticketId: ticket.id,
       guildId: ticket.guildId,
@@ -173,6 +198,7 @@ client.on('interactionCreate', async (interaction) => {
       ownerId: ticket.ownerId,
       staffId: ticket.firstStaffId,
       rating,
+      comment,
     });
     if (!saved) {
       await interaction.reply({ content: 'Esta encuesta ya fue respondida. Gracias.', ephemeral: true });
@@ -189,10 +215,11 @@ client.on('interactionCreate', async (interaction) => {
         .addFields(
           { name: 'Calificación', value: `${'⭐'.repeat(rating)} (${rating}/5)`, inline: true },
           { name: 'Staff evaluado', value: ticket.firstStaffId ? `<@${ticket.firstStaffId}>` : 'No identificado', inline: true },
+          { name: 'Comentario', value: comment || 'Sin comentario', inline: false },
         )
         .setTimestamp()] }).catch(() => {});
     }
-    await interaction.update({ content: `Gracias por tu valoración: ${'⭐'.repeat(rating)}`, components: [] });
+    await interaction.reply({ content: `Gracias por tu valoración: ${'⭐'.repeat(rating)}`, ephemeral: true });
     return;
   }
 
