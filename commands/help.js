@@ -26,7 +26,7 @@ module.exports = {
         },
         {
           name: '🎫 Tickets',
-          value: '`/ticket` — Crea un ticket de soporte privado.\n`/paneltickets` — Publica el panel de tickets (admins).\n`/tickets` — Lista los tickets abiertos (staff).\n`/config` — Configura tickets, logs y Minecraft (admins).',
+          value: '`/ticket` — Crea un ticket de soporte privado.\n`/paneltickets` — Publica el panel de tickets (admins).\n`/tickets` — Lista los tickets abiertos (staff).\n`/ticketratings` — Consulta las calificaciones del staff.\n`/config` — Configura tickets, logs y Minecraft (admins).',
         },
         {
           name: 'ℹ️ Utilidad',

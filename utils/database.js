@@ -34,6 +34,18 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS tickets_owner_idx ON tickets (guild_id, owner_id, status);
 
+  CREATE TABLE IF NOT EXISTS ticket_ratings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticket_id INTEGER NOT NULL UNIQUE,
+    guild_id TEXT NOT NULL,
+    channel_id TEXT NOT NULL,
+    owner_id TEXT NOT NULL,
+    staff_id TEXT,
+    rating INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (ticket_id) REFERENCES tickets(id)
+  );
+
   CREATE TABLE IF NOT EXISTS automod_settings (
     guild_id TEXT PRIMARY KEY,
     enabled INTEGER NOT NULL DEFAULT 1,
@@ -67,6 +79,12 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS moderation_logs_user_idx ON moderation_logs (guild_id, target_id, id);
 `);
+
+try {
+  db.exec('ALTER TABLE tickets ADD COLUMN first_staff_id TEXT');
+} catch (error) {
+  if (!error.message.includes('duplicate column name')) throw error;
+}
 
 function migrateWarnings() {
   const legacyPath = path.join(dataDirectory, 'warnings.json');
@@ -128,6 +146,18 @@ function claimTicket(channelId, staffId) {
   db.prepare('UPDATE tickets SET claimed_by = ? WHERE channel_id = ? AND status = \'open\'').run(staffId, channelId);
 }
 
+function getTicket(channelId) {
+  return db.prepare(`
+    SELECT id, guild_id AS guildId, channel_id AS channelId, owner_id AS ownerId,
+      first_staff_id AS firstStaffId, claimed_by AS claimedBy, status
+    FROM tickets WHERE channel_id = ?
+  `).get(channelId);
+}
+
+function setFirstStaff(channelId, staffId) {
+  db.prepare('UPDATE tickets SET first_staff_id = ? WHERE channel_id = ? AND first_staff_id IS NULL').run(staffId, channelId);
+}
+
 function closeTicket(channelId, staffId) {
   db.prepare(
     'UPDATE tickets SET status = \'closed\', closed_at = ?, closed_by = ? WHERE channel_id = ?'
@@ -139,6 +169,25 @@ function getOpenTickets(guildId) {
     SELECT channel_id AS channelId, owner_id AS ownerId, reason, claimed_by AS claimedBy, created_at AS createdAt
     FROM tickets WHERE guild_id = ? AND status = 'open' ORDER BY id ASC
   `).all(guildId);
+}
+
+function addTicketRating({ ticketId, guildId, channelId, ownerId, staffId, rating }) {
+  db.prepare(`
+    INSERT OR IGNORE INTO ticket_ratings (ticket_id, guild_id, channel_id, owner_id, staff_id, rating, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(ticketId, guildId, channelId, ownerId, staffId || null, rating, new Date().toISOString());
+  return db.prepare('SELECT changes() AS changes').get().changes > 0;
+}
+
+function getTicketRatingStats(guildId, staffId = null) {
+  const where = staffId ? 'AND staff_id = ?' : '';
+  const parameters = staffId ? [guildId, staffId] : [guildId];
+  return db.prepare(`
+    SELECT staff_id AS staffId, COUNT(*) AS total, ROUND(AVG(rating), 2) AS average,
+      SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END) AS fiveStars
+    FROM ticket_ratings WHERE guild_id = ? ${where} AND staff_id IS NOT NULL
+    GROUP BY staff_id ORDER BY average DESC
+  `).all(...parameters);
 }
 
 function getAutomodSettings(guildId, defaults) {
@@ -219,8 +268,12 @@ module.exports = {
   clearWarnings,
   createTicket,
   claimTicket,
+  getTicket,
+  setFirstStaff,
   closeTicket,
   getOpenTickets,
+  addTicketRating,
+  getTicketRatingStats,
   getAutomodSettings,
   saveAutomodSettings,
   addAutomodStrike,

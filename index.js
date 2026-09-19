@@ -5,7 +5,7 @@ const config = require('./config');
 const { errorEmbed } = require('./utils/embeds');
 const { isTicketStaff } = require('./utils/permissions');
 const { createTicketChannel, findUserTicket, getTicketOwnerId, saveTranscript } = require('./utils/tickets');
-const { claimTicket, closeTicket, getAutomodSettings, saveAutomodSettings, addAutomodStrike, resetAutomodStrikes, getGuildSettings, closeDatabase } = require('./utils/database');
+const { claimTicket, closeTicket, getTicket, setFirstStaff, addTicketRating, getAutomodSettings, saveAutomodSettings, addAutomodStrike, resetAutomodStrikes, getGuildSettings, closeDatabase } = require('./utils/database');
 const { logMessageDelete, logMessageEdit, logMemberJoin, logMemberLeave } = require('./utils/logger');
 
 const client = new Client({
@@ -44,6 +44,22 @@ const spamTracker = new Map();
 
 function getLogChannelId(guildId) {
   return getGuildSettings(guildId, config.defaultGuildSettings).logChannelId;
+}
+
+function isStaffMember(member, guildId) {
+  if (!member) return false;
+  if (member.permissions.has(PermissionFlagsBits.ManageChannels)) return true;
+  const settings = getGuildSettings(guildId, config.defaultGuildSettings);
+  return settings.ticketStaffRoleIds?.some((roleId) => member.roles.cache.has(roleId)) || false;
+}
+
+function ratingButtons(channelId) {
+  return new ActionRowBuilder().addComponents(
+    [1, 2, 3, 4, 5].map((rating) => new ButtonBuilder()
+      .setCustomId(`ticket_rating:${channelId}:${rating}`)
+      .setLabel(`${rating} ⭐`)
+      .setStyle(rating >= 4 ? ButtonStyle.Success : rating >= 3 ? ButtonStyle.Primary : ButtonStyle.Danger))
+  );
 }
 
 function getGuildAutomodSettings(guildId) {
@@ -136,6 +152,45 @@ client.on('interactionCreate', async (interaction) => {
     return;
   }
 
+  if (interaction.isButton() && interaction.customId.startsWith('ticket_rating:')) {
+    const [, channelId, ratingValue] = interaction.customId.split(':');
+    const ticket = getTicket(channelId);
+    const rating = Number(ratingValue);
+    if (!ticket || ticket.ownerId !== interaction.user.id || !Number.isInteger(rating) || rating < 1 || rating > 5) {
+      await interaction.reply({ content: '❌ Esta encuesta no está disponible para ti.', ephemeral: true });
+      return;
+    }
+
+    const saved = addTicketRating({
+      ticketId: ticket.id,
+      guildId: ticket.guildId,
+      channelId: ticket.channelId,
+      ownerId: ticket.ownerId,
+      staffId: ticket.firstStaffId,
+      rating,
+    });
+    if (!saved) {
+      await interaction.reply({ content: 'Esta encuesta ya fue respondida. Gracias.', ephemeral: true });
+      return;
+    }
+
+    const guild = await client.guilds.fetch(ticket.guildId).catch(() => null);
+    const logChannel = guild ? await guild.channels.fetch(getLogChannelId(ticket.guildId)).catch(() => null) : null;
+    if (logChannel) {
+      await logChannel.send({ embeds: [new EmbedBuilder()
+        .setColor(config.colors.success)
+        .setTitle('⭐ Calificación de ticket')
+        .setDescription(`El usuario <@${ticket.ownerId}> calificó el ticket <#${ticket.channelId}>.`)
+        .addFields(
+          { name: 'Calificación', value: `${'⭐'.repeat(rating)} (${rating}/5)`, inline: true },
+          { name: 'Staff evaluado', value: ticket.firstStaffId ? `<@${ticket.firstStaffId}>` : 'No identificado', inline: true },
+        )
+        .setTimestamp()] }).catch(() => {});
+    }
+    await interaction.update({ content: `Gracias por tu valoración: ${'⭐'.repeat(rating)}`, components: [] });
+    return;
+  }
+
   if (interaction.isButton() && interaction.customId === 'crear_ticket') {
     const motivo = client.ticketMotivos?.[interaction.user.id] || null;
     const existing = findUserTicket(interaction.guild, interaction.user.id);
@@ -202,6 +257,17 @@ client.on('interactionCreate', async (interaction) => {
     await channel.setTopic(`${channel.topic || ''};status:closed`);
     closeTicket(channel.id, interaction.user.id);
 
+    if (ownerId) {
+      const owner = await client.users.fetch(ownerId).catch(() => null);
+      if (owner) {
+        await owner.send({ embeds: [new EmbedBuilder()
+          .setColor(config.colors.primary)
+          .setTitle('⭐ ¿Cómo fue tu atención?')
+          .setDescription('Tu ticket fue cerrado. Califica la atención recibida seleccionando de 1 a 5 estrellas.')
+          .setFooter({ text: 'Solo puedes responder esta encuesta una vez.' })], components: [ratingButtons(channel.id)] }).catch(() => {});
+      }
+    }
+
     // Mostrar botón de eliminar permanente
     const deleteBtn = new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId('eliminar_ticket').setLabel('Eliminar Permanente').setStyle(ButtonStyle.Danger).setEmoji('🗑️')
@@ -238,6 +304,9 @@ client.on('guildMemberAdd', (member) => logMemberJoin(member, client));
 client.on('guildMemberRemove', (member) => logMemberLeave(member, client));
 client.on('messageCreate', async (message) => {
   if (!message.guild || message.author.bot) return;
+  if (message.channel.topic?.includes('ticket-owner:') && isStaffMember(message.member, message.guild.id)) {
+    setFirstStaff(message.channel.id, message.author.id);
+  }
   if (message.member?.permissions.has(PermissionFlagsBits.ManageMessages)) return;
 
   const automod = getGuildAutomodSettings(message.guild.id);
