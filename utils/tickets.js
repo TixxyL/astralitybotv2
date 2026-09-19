@@ -6,6 +6,15 @@ const path = require('path');
 const { ChannelType, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const config = require('../config');
 const { createTicket } = require('./database');
+const { getGuildSettings } = require('./database');
+
+function getTicketSettings(guildId) {
+  return getGuildSettings(guildId, {
+    ticketCategoryName: config.ticketCategoryName,
+    ticketPing: config.ticketPing,
+    ticketStaffRoleIds: config.ticketStaffRoleIds,
+  });
+}
 
 function findUserTicket(guild, userId) {
   return guild.channels.cache.find(
@@ -62,12 +71,13 @@ async function createTicketChannel(guild, user, motivo) {
   const existing = findUserTicket(guild, user.id);
   if (existing) return existing;
 
+  const settings = getTicketSettings(guild.id);
   let category = guild.channels.cache.find(
-    (c) => c.name === config.ticketCategoryName && c.type === ChannelType.GuildCategory
+    (c) => c.name === settings.ticketCategoryName && c.type === ChannelType.GuildCategory
   );
   if (!category) {
     category = await guild.channels.create({
-      name: config.ticketCategoryName,
+      name: settings.ticketCategoryName,
       type: ChannelType.GuildCategory,
     });
   }
@@ -79,7 +89,7 @@ async function createTicketChannel(guild, user, motivo) {
     topic: `ticket-owner:${user.id};status:open`,
     permissionOverwrites: [
       { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-      ...config.ticketStaffRoleIds.map((roleId) => ({
+      ...settings.ticketStaffRoleIds.map((roleId) => ({
         id: roleId,
         allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
       })),
@@ -102,7 +112,7 @@ async function createTicketChannel(guild, user, motivo) {
     new ButtonBuilder().setCustomId('cerrar_ticket').setLabel('Cerrar Ticket').setStyle(ButtonStyle.Danger).setEmoji('🔒')
   );
 
-  await channel.send({ content: config.ticketPing, embeds: [embed], components: [buttons] });
+  await channel.send({ content: settings.ticketPing, embeds: [embed], components: [buttons] });
   createTicket({ guildId: guild.id, channelId: channel.id, ownerId: user.id, reason: motivo });
   return channel;
 }

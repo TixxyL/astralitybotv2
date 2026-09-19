@@ -3,8 +3,9 @@ const path = require('path');
 const { Client, GatewayIntentBits, Partials, Collection, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require('discord.js');
 const config = require('./config');
 const { errorEmbed } = require('./utils/embeds');
+const { isTicketStaff } = require('./utils/permissions');
 const { createTicketChannel, findUserTicket, getTicketOwnerId, saveTranscript } = require('./utils/tickets');
-const { claimTicket, closeTicket, getAutomodSettings, saveAutomodSettings, addAutomodStrike, resetAutomodStrikes, closeDatabase } = require('./utils/database');
+const { claimTicket, closeTicket, getAutomodSettings, saveAutomodSettings, addAutomodStrike, resetAutomodStrikes, getGuildSettings, closeDatabase } = require('./utils/database');
 const { logMessageDelete, logMessageEdit, logMemberJoin, logMemberLeave } = require('./utils/logger');
 
 const client = new Client({
@@ -40,6 +41,10 @@ for (const command of loadCommands(path.join(__dirname, 'commands'))) {
 }
 
 const spamTracker = new Map();
+
+function getLogChannelId(guildId) {
+  return getGuildSettings(guildId, config.defaultGuildSettings).logChannelId;
+}
 
 function getGuildAutomodSettings(guildId) {
   if (!client.automodSettings) client.automodSettings = new Map();
@@ -144,7 +149,7 @@ client.on('interactionCreate', async (interaction) => {
   }
 
   if (interaction.isButton() && interaction.customId === 'reclamar_ticket') {
-    if (!interaction.member.permissions.has('ManageChannels')) {
+    if (!isTicketStaff(interaction)) {
       return interaction.reply({ content: '❌ Solo staff puede reclamar tickets.', ephemeral: true });
     }
 
@@ -165,7 +170,7 @@ client.on('interactionCreate', async (interaction) => {
   }
 
   if (interaction.isButton() && interaction.customId === 'cerrar_ticket') {
-    if (!interaction.member.permissions.has('ManageChannels')) {
+    if (!isTicketStaff(interaction)) {
       return interaction.reply({ content: '❌ Solo staff puede cerrar tickets.', ephemeral: true });
     }
 
@@ -175,7 +180,7 @@ client.on('interactionCreate', async (interaction) => {
     const { fileName, filePath } = await saveTranscript(channel, interaction.user);
 
     // Enviar al canal de logs
-    const logChannel = await interaction.guild.channels.fetch(config.logChannelId).catch(() => null);
+    const logChannel = await interaction.guild.channels.fetch(getLogChannelId(interaction.guild.id)).catch(() => null);
     if (logChannel) {
       const logEmbed = new EmbedBuilder()
         .setColor('#ffa500')
@@ -212,7 +217,7 @@ client.on('interactionCreate', async (interaction) => {
   }
 
   if (interaction.isButton() && interaction.customId === 'eliminar_ticket') {
-    if (!interaction.member.permissions.has('ManageChannels')) {
+    if (!isTicketStaff(interaction)) {
       return interaction.reply({ content: '❌ Solo staff puede eliminar tickets.', ephemeral: true });
     }
 
@@ -255,7 +260,7 @@ client.on('messageCreate', async (message) => {
   if (timeoutMinutes > 0 && message.member?.moderatable) {
     await message.member.timeout(timeoutMinutes * 60 * 1000, reason).catch(() => {});
   }
-  const logChannel = message.guild.channels.cache.get(config.logChannelId);
+  const logChannel = message.guild.channels.cache.get(getLogChannelId(message.guild.id));
   if (logChannel) {
     await logChannel.send({
       embeds: [new EmbedBuilder()
@@ -308,3 +313,7 @@ process.on('uncaughtException', (error) => {
 client.login(config.token).catch((error) => {
   console.error('No se pudo conectar al cliente de Discord:', error?.message || error);
 });
+
+if (process.env.WEB_ENABLED === 'true') {
+  require('./web/server');
+}

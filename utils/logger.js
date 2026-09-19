@@ -6,12 +6,14 @@ const https = require('https');
 const path = require('path');
 const { EmbedBuilder } = require('discord.js');
 const config = require('../config');
+const { getGuildSettings, addModerationLog } = require('./database');
 
 const ATTACHMENTS_DIR = path.join(__dirname, '..', 'data', 'deleted-attachments');
 
 function getLogChannel(guild) {
   if (!guild) return null;
-  return guild.channels.cache.get(config.logChannelId) || null;
+  const settings = getGuildSettings(guild.id, config.defaultGuildSettings);
+  return guild.channels.cache.get(settings.logChannelId) || null;
 }
 
 function downloadFile(url, filePath) {
@@ -110,6 +112,14 @@ const ACTION_LABELS = {
 };
 
 async function logModAction({ guild, action, moderator, target, reason, extra }, client) {
+  addModerationLog({
+    guildId: guild.id,
+    action,
+    moderatorId: moderator.id,
+    targetId: target?.id,
+    reason,
+    extra,
+  });
   const logChannel = getLogChannel(guild);
   if (!logChannel) return;
   const meta = ACTION_LABELS[action] || { emoji: '🛡️', label: action, color: config.colors.primary };

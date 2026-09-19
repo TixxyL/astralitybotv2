@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Astrality Control</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #10131a; color: #eef1f7; }
+    body { max-width: 760px; margin: 0 auto; padding: 32px 18px; }
+    h1 { margin-bottom: 6px; } p { color: #aab3c5; }
+    form { display: grid; gap: 14px; margin-top: 26px; }
+    label { display: grid; gap: 6px; color: #cbd3e1; }
+    input { padding: 11px; border: 1px solid #394257; border-radius: 6px; background: #191e29; color: inherit; }
+    button { width: fit-content; padding: 11px 16px; border: 0; border-radius: 6px; background: #57f287; color: #10131a; font-weight: 700; cursor: pointer; }
+    #message { min-height: 1.5em; }
+  </style>
+</head>
+<body>
+  <h1>Astrality Control</h1>
+  <p>Configuración del servidor y del sistema de tickets.</p>
+  <form id="settings-form">
+    <label>API key <input id="api-key" type="password" required></label>
+    <label>ID del servidor de Discord <input id="guild-id" required></label>
+    <label>Canal de logs <input id="log-channel" required></label>
+    <label>Categoría de tickets <input id="ticket-category" required></label>
+    <label>Mención de tickets <input id="ticket-ping" required></label>
+    <label>Rol de staff <input id="staff-role" required></label>
+    <label>IP o dominio de Minecraft <input id="mc-host" required></label>
+    <label>Puerto de Minecraft <input id="mc-port" type="number" min="1" max="65535" required></label>
+    <button>Guardar configuración</button>
+  </form>
+  <p id="message"></p>
+  <script>
+    const form = document.querySelector('#settings-form');
+    const message = document.querySelector('#message');
+    const field = (id) => document.querySelector(id);
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const guildId = field('#guild-id').value.trim();
+      const headers = { 'Content-Type': 'application/json', 'x-api-key': field('#api-key').value };
+      const payload = {
+        logChannelId: field('#log-channel').value.trim(),
+        ticketCategoryName: field('#ticket-category').value.trim(),
+        ticketPing: field('#ticket-ping').value.trim(),
+        ticketStaffRoleIds: [field('#staff-role').value.trim()],
+        minecraft: { host: field('#mc-host').value.trim(), port: Number(field('#mc-port').value) },
+      };
+      const response = await fetch(`/api/guild/${guildId}/settings`, { method: 'PUT', headers, body: JSON.stringify(payload) });
+      message.textContent = response.ok ? 'Configuración guardada.' : 'No se pudo guardar. Comprueba la API key y los datos.';
+    });
+  </script>
+</body>
+</html>

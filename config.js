@@ -58,6 +58,16 @@ module.exports = {
   ticketPing: process.env.TICKET_PING || '<@1530063998370975888>',
   ticketCategoryName: process.env.TICKET_CATEGORY_NAME || 'TICKETS',
   ticketStaffRoleIds: parseIdList(process.env.TICKET_STAFF_ROLE_IDS, []),
+  defaultGuildSettings: {
+    logChannelId: process.env.LOG_CHANNEL_ID || '1530464190928650291',
+    ticketCategoryName: process.env.TICKET_CATEGORY_NAME || 'TICKETS',
+    ticketPing: process.env.TICKET_PING || '<@1530063998370975888>',
+    ticketStaffRoleIds: parseIdList(process.env.TICKET_STAFF_ROLE_IDS, []),
+    minecraft: {
+      host: process.env.SERVER_IP || 'astrality.net',
+      port: Number(process.env.SERVER_PORT) || 25565,
+    },
+  },
 
   automod: {
     enabled: process.env.AUTOMOD_ENABLED !== 'false',

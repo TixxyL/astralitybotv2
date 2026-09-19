@@ -49,6 +49,23 @@ db.exec(`
     updated_at TEXT NOT NULL,
     PRIMARY KEY (guild_id, user_id)
   );
+
+  CREATE TABLE IF NOT EXISTS guild_settings (
+    guild_id TEXT PRIMARY KEY,
+    settings TEXT NOT NULL DEFAULT '{}'
+  );
+
+  CREATE TABLE IF NOT EXISTS moderation_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    moderator_id TEXT NOT NULL,
+    target_id TEXT,
+    reason TEXT,
+    extra TEXT,
+    created_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS moderation_logs_user_idx ON moderation_logs (guild_id, target_id, id);
 `);
 
 function migrateWarnings() {
@@ -117,6 +134,13 @@ function closeTicket(channelId, staffId) {
   ).run(new Date().toISOString(), staffId, channelId);
 }
 
+function getOpenTickets(guildId) {
+  return db.prepare(`
+    SELECT channel_id AS channelId, owner_id AS ownerId, reason, claimed_by AS claimedBy, created_at AS createdAt
+    FROM tickets WHERE guild_id = ? AND status = 'open' ORDER BY id ASC
+  `).all(guildId);
+}
+
 function getAutomodSettings(guildId, defaults) {
   const row = db.prepare('SELECT enabled, block_links AS blockLinks, timeout_minutes AS timeoutMinutes, allowed_domains AS allowedDomains FROM automod_settings WHERE guild_id = ?').get(guildId);
   if (!row) return { ...defaults, allowedDomains: [...defaults.allowedDomains] };
@@ -154,6 +178,37 @@ function resetAutomodStrikes(guildId, userId) {
   db.prepare('DELETE FROM automod_strikes WHERE guild_id = ? AND user_id = ?').run(guildId, userId);
 }
 
+function getGuildSettings(guildId, defaults = {}) {
+  const row = db.prepare('SELECT settings FROM guild_settings WHERE guild_id = ?').get(guildId);
+  if (!row) return { ...defaults };
+  try {
+    return { ...defaults, ...JSON.parse(row.settings) };
+  } catch {
+    return { ...defaults };
+  }
+}
+
+function saveGuildSettings(guildId, settings) {
+  db.prepare(`
+    INSERT INTO guild_settings (guild_id, settings) VALUES (?, ?)
+    ON CONFLICT(guild_id) DO UPDATE SET settings = excluded.settings
+  `).run(guildId, JSON.stringify(settings));
+}
+
+function addModerationLog({ guildId, action, moderatorId, targetId, reason, extra }) {
+  db.prepare(`
+    INSERT INTO moderation_logs (guild_id, action, moderator_id, target_id, reason, extra, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(guildId, action, moderatorId, targetId || null, reason || null, extra || null, new Date().toISOString());
+}
+
+function getModerationLogs(guildId, targetId, limit = 20) {
+  return db.prepare(`
+    SELECT action, moderator_id AS moderatorId, target_id AS targetId, reason, extra, created_at AS timestamp
+    FROM moderation_logs WHERE guild_id = ? AND target_id = ? ORDER BY id DESC LIMIT ?
+  `).all(guildId, targetId, limit);
+}
+
 function closeDatabase() {
   if (db.open) db.close();
 }
@@ -165,9 +220,14 @@ module.exports = {
   createTicket,
   claimTicket,
   closeTicket,
+  getOpenTickets,
   getAutomodSettings,
   saveAutomodSettings,
   addAutomodStrike,
   resetAutomodStrikes,
+  getGuildSettings,
+  saveGuildSettings,
+  addModerationLog,
+  getModerationLogs,
   closeDatabase,
 };

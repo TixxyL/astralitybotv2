@@ -26,7 +26,7 @@ module.exports = {
         },
         {
           name: '🎫 Tickets',
-          value: '`/ticket` — Crea un ticket de soporte privado.\n`/paneltickets` — Publica el panel de tickets (admins).',
+          value: '`/ticket` — Crea un ticket de soporte privado.\n`/paneltickets` — Publica el panel de tickets (admins).\n`/tickets` — Lista los tickets abiertos (staff).\n`/config` — Configura tickets, logs y Minecraft (admins).',
         },
         {
           name: 'ℹ️ Utilidad',
@@ -38,6 +38,8 @@ module.exports = {
             '`/avatar` — Muestra el avatar de un usuario.\n' +
               '`/status` — Muestra la latencia y estado del bot.\n' +
               '`/automod` — Administra filtros y dominios permitidos.\n' +
+            '`/modlogs` — Consulta el historial de moderación.\n' +
+            '`/mcstatus` — Muestra el estado del servidor de Minecraft.\n' +
             '`/ask` — Pregunta algo a Astrality Assistant.',
         },
         {
