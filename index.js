@@ -46,6 +46,11 @@ function getLogChannelId(guildId) {
   return getGuildSettings(guildId, config.defaultGuildSettings).logChannelId;
 }
 
+function getTranscriptChannelId(guildId) {
+  const settings = getGuildSettings(guildId, config.defaultGuildSettings);
+  return settings.transcriptChannelId || settings.logChannelId;
+}
+
 function isStaffMember(member, guildId) {
   if (!member) return false;
   if (member.permissions.has(PermissionFlagsBits.ManageChannels)) return true;
@@ -175,9 +180,9 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     const guild = await client.guilds.fetch(ticket.guildId).catch(() => null);
-    const logChannel = guild ? await guild.channels.fetch(getLogChannelId(ticket.guildId)).catch(() => null) : null;
-    if (logChannel) {
-      await logChannel.send({ embeds: [new EmbedBuilder()
+    const transcriptChannel = guild ? await guild.channels.fetch(getTranscriptChannelId(ticket.guildId)).catch(() => null) : null;
+    if (transcriptChannel) {
+      await transcriptChannel.send({ embeds: [new EmbedBuilder()
         .setColor(config.colors.success)
         .setTitle('⭐ Calificación de ticket')
         .setDescription(`El usuario <@${ticket.ownerId}> calificó el ticket <#${ticket.channelId}>.`)
@@ -234,16 +239,15 @@ client.on('interactionCreate', async (interaction) => {
 
     const { fileName, filePath } = await saveTranscript(channel, interaction.user);
 
-    // Enviar al canal de logs
-    const logChannel = await interaction.guild.channels.fetch(getLogChannelId(interaction.guild.id)).catch(() => null);
-    if (logChannel) {
+    const transcriptChannel = await interaction.guild.channels.fetch(getTranscriptChannelId(interaction.guild.id)).catch(() => null);
+    if (transcriptChannel) {
       const logEmbed = new EmbedBuilder()
         .setColor('#ffa500')
         .setTitle('🔒 Ticket cerrado')
         .setDescription(`**Canal:** ${channel}\n**Cerrado por:** ${interaction.user}\n**Archivo:** \`${fileName}\``)
         .setTimestamp();
 
-      await logChannel.send({ embeds: [logEmbed], files: [filePath] }).catch(() => {});
+      await transcriptChannel.send({ embeds: [logEmbed], files: [filePath] }).catch(() => {});
     }
 
     const ownerId = getTicketOwnerId(channel);
