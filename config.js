@@ -59,13 +59,13 @@ module.exports = {
   ticketCategoryName: process.env.TICKET_CATEGORY_NAME || 'TICKETS',
   ticketStaffRoleIds: parseIdList(process.env.TICKET_STAFF_ROLE_IDS, []),
   defaultGuildSettings: {
-    logChannelId: process.env.LOG_CHANNEL_ID || '1530464190928650291',
+    logChannelId: process.env.LOG_CHANNEL_ID || '1550766657700364359',
     ticketCategoryName: process.env.TICKET_CATEGORY_NAME || 'TICKETS',
     ticketPing: process.env.TICKET_PING || '<@1530063998370975888>',
     ticketStaffRoleIds: parseIdList(process.env.TICKET_STAFF_ROLE_IDS, []),
     minecraft: {
-      host: process.env.SERVER_IP || 'astrality.net',
-      port: Number(process.env.SERVER_PORT) || 25565,
+      host: process.env.SERVER_IP || 'astrality.xyz',
+      port: Number(process.env.SERVER_PORT) || 25566,
     },
   },
 
@@ -89,8 +89,8 @@ module.exports = {
   },
 
   // Datos del servidor de Minecraft para /ip.
-  serverIp: process.env.SERVER_IP || 'astrality.net',
-  serverPort: process.env.SERVER_PORT || '25565',
+  serverIp: process.env.SERVER_IP || 'astrality.xyz',
+  serverPort: process.env.SERVER_PORT || '25566',
   serverVersion: process.env.SERVER_VERSION || '1.20.x - 1.21.x (Java y Bedrock)',
 
   // Paleta de embeds - un solo lugar para mantener el look consistente.
