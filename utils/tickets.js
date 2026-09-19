@@ -89,10 +89,12 @@ async function createTicketChannel(guild, user, motivo) {
     topic: `ticket-owner:${user.id};status:open`,
     permissionOverwrites: [
       { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-      ...settings.ticketStaffRoleIds.map((roleId) => ({
+      ...settings.ticketStaffRoleIds
+        .filter((roleId) => /^\d{15,21}$/.test(roleId) && guild.roles.cache.has(roleId))
+        .map((roleId) => ({
         id: roleId,
         allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
-      })),
+        })),
       { id: user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.AttachFiles] },
     ],
   });
