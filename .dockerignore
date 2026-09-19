@@ -1,0 +1,8 @@
+node_modules
+npm-debug.log
+.env
+.git
+data/astrality.sqlite-shm
+data/astrality.sqlite-wal
+data/transcripciones
+data/deleted-attachments

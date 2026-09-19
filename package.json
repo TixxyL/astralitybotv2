@@ -1,0 +1,19 @@
+{
+  "name": "astrality-bot-v2",
+  "version": "2.0.0",
+  "description": "Bot de Discord de Astrality Network: moderación (ban/kick/timeout/warns), logs, tickets y embeds modernos.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "deploy": "node deploy-commands.js",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:save": "pm2 save"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.4.5"
+  }
+}
