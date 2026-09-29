@@ -112,6 +112,7 @@ client.once('clientReady', async () => {
   client.automodSettings = new Map();
   await initializeInviteTracking(client);
 
+  let presenceIndex = 0;
   function updatePresence() {
     const guild = client.guilds.cache.first();
     let userCount = 0;
@@ -125,13 +126,11 @@ client.once('clientReady', async () => {
       { name: `tickets (${ticketCount})`, type: 2 },
       { name: 'Astrality Network', type: 0 },
     ];
-    let i = 0;
-    setInterval(() => {
-      client.user.setPresence({ activities: [presences[i % presences.length]], status: 'online' });
-      i++;
-    }, 15000);
+    client.user.setPresence({ activities: [presences[presenceIndex % presences.length]], status: 'online' });
+    presenceIndex++;
   }
   updatePresence();
+  setInterval(updatePresence, 15000);
 });
 
 client.on('interactionCreate', async (interaction) => {
