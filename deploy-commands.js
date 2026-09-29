@@ -6,16 +6,17 @@ const { REST, Routes } = require('discord.js');
 const config = require('./config');
 
 function loadCommandData(dir) {
-  const data = [];
+  const data = new Map();
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      data.push(...loadCommandData(fullPath));
+      for (const command of loadCommandData(fullPath)) data.set(command.name, command);
     } else if (entry.name.endsWith('.js')) {
-      data.push(require(fullPath).data.toJSON());
+      const command = require(fullPath).data.toJSON();
+      data.set(command.name, command);
     }
   }
-  return data;
+  return [...data.values()];
 }
 
 const commands = loadCommandData(path.join(__dirname, 'commands'));

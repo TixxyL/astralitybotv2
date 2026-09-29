@@ -7,6 +7,7 @@ const { isTicketStaff } = require('./utils/permissions');
 const { createTicketChannel, findUserTicket, getTicketOwnerId, saveTranscript } = require('./utils/tickets');
 const { claimTicket, closeTicket, getTicket, setFirstStaff, addTicketRating, getAutomodSettings, saveAutomodSettings, addAutomodStrike, resetAutomodStrikes, getGuildSettings, closeDatabase } = require('./utils/database');
 const { logMessageDelete, logMessageEdit, logMemberJoin, logMemberLeave } = require('./utils/logger');
+const { initializeInviteTracking, handleInviteCreate, handleInviteDelete, processMemberJoin } = require('./utils/invites');
 
 const client = new Client({
   intents: [
@@ -106,9 +107,10 @@ function getLinkDomain(content) {
   }
 }
 
-client.once('clientReady', () => {
+client.once('clientReady', async () => {
   console.log(`✅ Bot listo como ${client.user.tag}`);
   client.automodSettings = new Map();
+  await initializeInviteTracking(client);
 
   function updatePresence() {
     const guild = client.guilds.cache.first();
@@ -329,9 +331,22 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
+client.on('inviteCreate', handleInviteCreate);
+client.on('inviteDelete', handleInviteDelete);
 client.on('messageDelete', (message) => logMessageDelete(message, client));
 client.on('messageUpdate', (oldMessage, newMessage) => logMessageEdit(oldMessage, newMessage, client));
-client.on('guildMemberAdd', (member) => logMemberJoin(member, client));
+client.on('guildMemberAdd', async (member) => {
+  const invite = await processMemberJoin(member);
+  await logMemberJoin(member, client, invite);
+
+  const channel = member.guild.channels.cache.get(config.inviteChannelId);
+  if (!channel?.isTextBased()) return;
+  const inviterText = invite?.inviterId ? `<@${invite.inviterId}>` : 'No se pudo identificar la invitación';
+  const totalText = invite ? `Lleva **${invite.total} invitación${invite.total === 1 ? '' : 'es'}**.` : 'El contador se actualizará cuando Discord permita identificar la invitación.';
+  await channel.send(`📥 **${member.user.tag}** entró al servidor. Invitado por ${inviterText}. ${totalText}`).catch((error) => {
+    console.error('[INVITES] No se pudo publicar la entrada:', error.message);
+  });
+});
 client.on('guildMemberRemove', (member) => logMemberLeave(member, client));
 client.on('messageCreate', async (message) => {
   if (!message.guild || message.author.bot) return;

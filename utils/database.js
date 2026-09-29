@@ -78,6 +78,24 @@ db.exec(`
     created_at TEXT NOT NULL
   );
   CREATE INDEX IF NOT EXISTS moderation_logs_user_idx ON moderation_logs (guild_id, target_id, id);
+
+  CREATE TABLE IF NOT EXISTS invite_snapshots (
+    guild_id TEXT NOT NULL,
+    invite_code TEXT NOT NULL,
+    uses INTEGER NOT NULL DEFAULT 0,
+    inviter_id TEXT,
+    PRIMARY KEY (guild_id, invite_code)
+  );
+
+  CREATE TABLE IF NOT EXISTS invite_uses (
+    guild_id TEXT NOT NULL,
+    member_id TEXT NOT NULL,
+    inviter_id TEXT NOT NULL,
+    invite_code TEXT,
+    joined_at TEXT NOT NULL,
+    PRIMARY KEY (guild_id, member_id)
+  );
+  CREATE INDEX IF NOT EXISTS invite_uses_inviter_idx ON invite_uses (guild_id, inviter_id);
 `);
 
 try {
@@ -264,6 +282,45 @@ function getModerationLogs(guildId, targetId, limit = 20) {
   `).all(guildId, targetId, limit);
 }
 
+function replaceInviteSnapshots(guildId, snapshots) {
+  const transaction = db.transaction(() => {
+    db.prepare('DELETE FROM invite_snapshots WHERE guild_id = ?').run(guildId);
+    const insert = db.prepare(`
+      INSERT INTO invite_snapshots (guild_id, invite_code, uses, inviter_id)
+      VALUES (?, ?, ?, ?)
+    `);
+    for (const snapshot of snapshots) {
+      insert.run(guildId, snapshot.code, snapshot.uses, snapshot.inviterId || null);
+    }
+  });
+  transaction();
+}
+
+function recordInviteUse({ guildId, memberId, inviterId, inviteCode }) {
+  db.prepare(`
+    INSERT INTO invite_uses (guild_id, member_id, inviter_id, invite_code, joined_at)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(guild_id, member_id) DO UPDATE SET
+      inviter_id = excluded.inviter_id,
+      invite_code = excluded.invite_code,
+      joined_at = excluded.joined_at
+  `).run(guildId, memberId, inviterId, inviteCode || null, new Date().toISOString());
+}
+
+function getInviteCount(guildId, inviterId) {
+  return db.prepare('SELECT COUNT(*) AS count FROM invite_uses WHERE guild_id = ? AND inviter_id = ?').get(guildId, inviterId).count;
+}
+
+function getInvitedMembers(guildId, inviterId, limit = 50) {
+  return db.prepare(`
+    SELECT member_id AS memberId, invite_code AS inviteCode, joined_at AS joinedAt
+    FROM invite_uses
+    WHERE guild_id = ? AND inviter_id = ?
+    ORDER BY joined_at DESC
+    LIMIT ?
+  `).all(guildId, inviterId, limit);
+}
+
 function closeDatabase() {
   if (db.open) db.close();
 }
@@ -288,5 +345,9 @@ module.exports = {
   saveGuildSettings,
   addModerationLog,
   getModerationLogs,
+  replaceInviteSnapshots,
+  recordInviteUse,
+  getInviteCount,
+  getInvitedMembers,
   closeDatabase,
 };

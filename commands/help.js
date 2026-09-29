@@ -40,7 +40,9 @@ module.exports = {
               '`/automod` — Administra filtros y dominios permitidos.\n' +
             '`/modlogs` — Consulta el historial de moderación.\n' +
             '`/mcstatus` — Muestra el estado del servidor de Minecraft.\n' +
-            '`/ask` — Pregunta algo a Astrality Assistant.',
+            '`/ask` — Pregunta algo a Astrality Assistant.\n' +
+            '`/invites` — Muestra las recompensas por invitaciones.\n' +
+            '`/inviteslist` — Muestra las personas invitadas por un usuario.',
         },
         {
           name: '⚙️ Administración',

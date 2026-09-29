@@ -143,7 +143,7 @@ async function logModAction({ guild, action, moderator, target, reason, extra },
   await logChannel.send({ embeds: [embed] }).catch((err) => console.error('[LOG ERROR] modAction:', err));
 }
 
-async function logMemberJoin(member, client) {
+async function logMemberJoin(member, client, invite) {
   const logChannel = getLogChannel(member.guild);
   if (!logChannel) return;
   const accountAgeDays = Math.floor((Date.now() - member.user.createdTimestamp) / 86400000);
@@ -158,6 +158,10 @@ async function logMemberJoin(member, client) {
     .setTimestamp();
   if (accountAgeDays < 3) {
     embed.addFields({ name: '⚠️ Cuenta reciente', value: 'Esta cuenta tiene menos de 3 días de antigüedad.' });
+  }
+  if (invite?.inviterId) {
+    embed.addFields({ name: 'Invitado por', value: `<@${invite.inviterId}>`, inline: true });
+    embed.addFields({ name: 'Invitaciones acumuladas', value: `${invite.total}`, inline: true });
   }
   await logChannel.send({ embeds: [embed] }).catch((err) => console.error('[LOG ERROR] memberJoin:', err));
 }

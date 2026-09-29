@@ -50,6 +50,7 @@ module.exports = {
   // acciones de moderación, entradas/salidas de miembros).
   logChannelId: process.env.LOG_CHANNEL_ID || '1530464190928650291',
   transcriptChannelId: process.env.TRANSCRIPT_CHANNEL_ID || '',
+  inviteChannelId: process.env.INVITE_CHANNEL_ID || '1554371192528310292',
 
   // Usuarios que siempre tienen acceso a comandos de moderación/admin,
   // sin importar sus permisos de rol en el servidor.
@@ -62,6 +63,7 @@ module.exports = {
   defaultGuildSettings: {
     logChannelId: process.env.LOG_CHANNEL_ID || '1550766657700364359',
     transcriptChannelId: process.env.TRANSCRIPT_CHANNEL_ID || '',
+    inviteChannelId: process.env.INVITE_CHANNEL_ID || '1554371192528310292',
     ticketCategoryName: process.env.TICKET_CATEGORY_NAME || 'TICKETS',
     ticketPing: process.env.TICKET_PING || '<@1530063998370975888>',
     ticketStaffRoleIds: parseIdList(process.env.TICKET_STAFF_ROLE_IDS, []),
