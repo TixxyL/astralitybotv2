@@ -1,5 +1,6 @@
 const path = require('path');
 const express = require('express');
+const { PermissionsBitField, PermissionFlagsBits } = require('discord.js');
 const config = require('../config');
 const { getGuildSettings, saveGuildSettings } = require('../utils/database');
 
@@ -17,7 +18,19 @@ app.get('/install', (request, response) => {
   const installUrl = new URL('https://discord.com/oauth2/authorize');
   installUrl.searchParams.set('client_id', config.clientId);
   installUrl.searchParams.set('scope', 'bot applications.commands');
-  installUrl.searchParams.set('permissions', '0');
+  installUrl.searchParams.set('permissions', PermissionsBitField.resolve([
+    PermissionFlagsBits.ViewChannel,
+    PermissionFlagsBits.SendMessages,
+    PermissionFlagsBits.EmbedLinks,
+    PermissionFlagsBits.ReadMessageHistory,
+    PermissionFlagsBits.AttachFiles,
+    PermissionFlagsBits.ManageMessages,
+    PermissionFlagsBits.ManageChannels,
+    PermissionFlagsBits.ManageGuild,
+    PermissionFlagsBits.KickMembers,
+    PermissionFlagsBits.BanMembers,
+    PermissionFlagsBits.ModerateMembers,
+  ]).toString());
   response.redirect(installUrl.toString());
 });
 

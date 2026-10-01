@@ -28,6 +28,7 @@ module.exports = {
         { name: 'Ver configuración', value: 'view' },
         { name: 'Canal de logs', value: 'log-channel' },
         { name: 'Canal de transcripciones', value: 'transcript-channel' },
+        { name: 'Canal de invitaciones', value: 'invite-channel' },
         { name: 'Categoría de tickets', value: 'ticket-category' },
         { name: 'Mención de tickets', value: 'ticket-ping' },
         { name: 'Rol de staff de tickets', value: 'staff-role' },
@@ -56,6 +57,7 @@ module.exports = {
       await interaction.reply({ embeds: [baseEmbed(interaction.guild).setTitle('⚙️ Configuración del servidor').addFields(
         { name: 'Canal de logs', value: `<#${settings.logChannelId}>`, inline: true },
         { name: 'Canal de transcripciones', value: settings.transcriptChannelId ? `<#${settings.transcriptChannelId}>` : 'No configurado', inline: true },
+        { name: 'Canal de invitaciones', value: settings.inviteChannelId ? `<#${settings.inviteChannelId}>` : 'No configurado', inline: true },
         { name: 'Categoría de tickets', value: settings.ticketCategoryName, inline: true },
         { name: 'Mención de tickets', value: settings.ticketPing, inline: true },
         { name: 'Staff de tickets', value: staff, inline: true },
@@ -70,6 +72,9 @@ module.exports = {
     } else if (action === 'transcript-channel') {
       if (!channel) return interaction.reply({ embeds: [errorEmbed(interaction.guild, 'Falta el canal', 'Selecciona el canal exclusivo de transcripciones.')], ephemeral: true });
       settings.transcriptChannelId = channel.id;
+    } else if (action === 'invite-channel') {
+      if (!channel) return interaction.reply({ embeds: [errorEmbed(interaction.guild, 'Falta el canal', 'Selecciona el canal donde se anunciarán las invitaciones.')], ephemeral: true });
+      settings.inviteChannelId = channel.id;
     } else if (action === 'ticket-category') {
       if (!value || value.length > 90) return interaction.reply({ embeds: [errorEmbed(interaction.guild, 'Nombre inválido', 'Indica un nombre de categoría de hasta 90 caracteres.')], ephemeral: true });
       settings.ticketCategoryName = value;

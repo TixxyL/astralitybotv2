@@ -115,13 +115,11 @@ client.once('clientReady', async () => {
 
   let presenceIndex = 0;
   function updatePresence() {
-    const guild = client.guilds.cache.first();
-    let userCount = 0;
-    let ticketCount = 0;
-    if (guild) {
-      userCount = guild.memberCount;
-      ticketCount = guild.channels.cache.filter((c) => c.name && c.name.startsWith('ticket-')).size;
-    }
+    const userCount = client.guilds.cache.reduce((total, guild) => total + guild.memberCount, 0);
+    const ticketCount = client.guilds.cache.reduce(
+      (total, guild) => total + guild.channels.cache.filter((channel) => channel.name?.startsWith('ticket-')).size,
+      0,
+    );
     const presences = [
       { name: `Viendo a ${userCount} usuarios`, type: 3 },
       { name: `tickets (${ticketCount})`, type: 2 },
@@ -339,7 +337,8 @@ client.on('guildMemberAdd', async (member) => {
   const invite = await processMemberJoin(member);
   await logMemberJoin(member, client, invite);
 
-  const channel = member.guild.channels.cache.get(config.inviteChannelId);
+  const inviteSettings = getGuildSettings(member.guild.id, config.defaultGuildSettings);
+  const channel = member.guild.channels.cache.get(inviteSettings.inviteChannelId);
   if (!channel?.isTextBased()) return;
   const inviterText = invite?.inviterId ? `<@${invite.inviterId}>` : 'No se pudo identificar la invitación';
   const totalText = invite ? `Lleva **${invite.total} invitación${invite.total === 1 ? '' : 'es'}**.` : 'El contador se actualizará cuando Discord permita identificar la invitación.';
