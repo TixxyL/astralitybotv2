@@ -43,7 +43,7 @@ async function startCloudflareTunnel() {
 
   try {
     await ensureBinary();
-    const tunnel = spawn(binaryPath, ['tunnel', 'run', '--no-autoupdate', '--token', token], {
+    const tunnel = spawn(binaryPath, ['tunnel', 'run', '--token', token], {
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     tunnel.stdout.on('data', (data) => console.log(`[CLOUDFLARE] ${data.toString().trim()}`));
