@@ -10,6 +10,9 @@ const webToken = process.env.WEB_TOKEN;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.get('/terms', (request, response) => response.sendFile(path.join(__dirname, 'public', 'terms.html')));
+app.get('/privacy', (request, response) => response.sendFile(path.join(__dirname, 'public', 'privacy.html')));
+
 app.get('/install', (request, response) => {
   const installUrl = new URL('https://discord.com/oauth2/authorize');
   installUrl.searchParams.set('client_id', config.clientId);
