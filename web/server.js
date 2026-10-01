@@ -10,6 +10,14 @@ const webToken = process.env.WEB_TOKEN;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.get('/install', (request, response) => {
+  const installUrl = new URL('https://discord.com/oauth2/authorize');
+  installUrl.searchParams.set('client_id', config.clientId);
+  installUrl.searchParams.set('scope', 'bot applications.commands');
+  installUrl.searchParams.set('permissions', '0');
+  response.redirect(installUrl.toString());
+});
+
 function authenticated(request, response, next) {
   if (!webToken || request.get('x-api-key') !== webToken) {
     return response.status(401).json({ error: 'No autorizado' });
