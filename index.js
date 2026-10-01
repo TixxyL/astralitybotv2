@@ -8,6 +8,7 @@ const { createTicketChannel, findUserTicket, getTicketOwnerId, saveTranscript } 
 const { claimTicket, closeTicket, getTicket, setFirstStaff, addTicketRating, getAutomodSettings, saveAutomodSettings, addAutomodStrike, resetAutomodStrikes, getGuildSettings, closeDatabase } = require('./utils/database');
 const { logMessageDelete, logMessageEdit, logMemberJoin, logMemberLeave } = require('./utils/logger');
 const { initializeInviteTracking, handleInviteCreate, handleInviteDelete, processMemberJoin } = require('./utils/invites');
+const { startCloudflareTunnel } = require('./utils/cloudflare');
 
 const client = new Client({
   intents: [
@@ -430,4 +431,5 @@ client.login(config.token).catch((error) => {
 
 if (process.env.WEB_ENABLED === 'true') {
   require('./web/server');
+  startCloudflareTunnel();
 }
